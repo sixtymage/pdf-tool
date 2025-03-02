@@ -1,0 +1,20 @@
+{
+  "profiles": {
+    "PdfMerger": {
+      "commandName": "Project",
+      "dotnetRunMessages": true,
+      "environmentVariables": {
+        "DOTNET_ENVIRONMENT": "Development"
+      }
+    },
+    "PdfMerger (Debug)": {
+      "commandName": "Project",
+      "dotnetRunMessages": true,
+      "environmentVariables": {
+        "DOTNET_ENVIRONMENT": "Development"
+      },
+      "hotReloadEnabled": true,
+      "hotReloadProfile": "aspnetcore"
+    }
+  }
+} 
