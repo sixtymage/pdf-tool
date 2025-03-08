@@ -4,138 +4,195 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:PdfMerger"
+        xmlns:helpers="clr-namespace:PdfMerger.Helpers"
         xmlns:viewModels="clr-namespace:PdfMerger.ViewModels"
         mc:Ignorable="d"
-        Title="PDF Merger" Height="600" Width="800"
+        Title="{x:Static helpers:AppInfo.TitleWithVersion}"
+        Height="600"
+        Width="800"
         WindowStartupLocation="CenterScreen"
-        AllowDrop="True" Drop="Window_Drop" DragOver="Window_DragOver">
-    
-    <Window.Resources>
-        <Style TargetType="Button">
-            <Setter Property="Padding" Value="10,5"/>
-            <Setter Property="Margin" Value="5"/>
-        </Style>
-    </Window.Resources>
-    
-    <Grid Margin="10">
+        AllowDrop="True"
+        Drop="Window_Drop"
+        DragOver="Window_DragOver">
+
+  <Window.Resources>
+    <Style TargetType="Button">
+      <Setter Property="Padding"
+              Value="10,5"/>
+      <Setter Property="Margin"
+              Value="5"/>
+    </Style>
+    <Style TargetType="CheckBox">
+      <Setter Property="Margin"
+              Value="0,5"/>
+      <Setter Property="VerticalAlignment"
+              Value="Center"/>
+    </Style>
+  </Window.Resources>
+
+  <Grid Margin="10">
+    <Grid.RowDefinitions>
+      <RowDefinition Height="Auto"/>
+      <RowDefinition Height="*"/>
+      <RowDefinition Height="Auto"/>
+      <RowDefinition Height="Auto"/>
+      <RowDefinition Height="Auto"/>
+    </Grid.RowDefinitions>
+
+    <!-- Header -->
+    <StackPanel Grid.Row="0"
+                Margin="0,0,0,10">
+      <TextBlock Text="{x:Static helpers:AppInfo.TitleWithVersion}"
+                 FontSize="24"
+                 FontWeight="Bold"
+                 Margin="0,0,0,10"/>
+      <TextBlock Text="Select PDF files to merge, arrange them in the desired order, and click 'Merge PDFs'."
+                 TextWrapping="Wrap"/>
+      <TextBlock Text="You can also drag and drop PDF files directly into the list."
+                 TextWrapping="Wrap"
+                 Margin="0,5,0,0"/>
+    </StackPanel>
+
+    <!-- File List -->
+    <Border Grid.Row="1"
+            BorderBrush="#DDDDDD"
+            BorderThickness="1"
+            Padding="5">
+      <Grid>
         <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="*"/>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
+          <RowDefinition Height="Auto"/>
+          <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
-        
-        <!-- Header -->
-        <StackPanel Grid.Row="0" Margin="0,0,0,10">
-            <TextBlock Text="PDF Merger" FontSize="24" FontWeight="Bold" Margin="0,0,0,10"/>
-            <TextBlock Text="Select PDF files to merge, arrange them in the desired order, and click 'Merge PDFs'." 
-                       TextWrapping="Wrap"/>
-            <TextBlock Text="You can also drag and drop PDF files directly into the list." 
-                       TextWrapping="Wrap" Margin="0,5,0,0"/>
+
+        <StackPanel Grid.Row="0"
+                    Orientation="Horizontal"
+                    Margin="0,0,0,5">
+          <Button Content="Add Files"
+                  Command="{Binding AddFilesCommand}"
+                  Padding="10,5"
+                  Margin="0,0,5,0"/>
+          <Button Content="Clear All"
+                  Command="{Binding ClearFilesCommand}"
+                  Padding="10,5"/>
         </StackPanel>
-        
-        <!-- File List -->
-        <Border Grid.Row="1" BorderBrush="#DDDDDD" BorderThickness="1" Padding="5">
-            <Grid>
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="*"/>
-                </Grid.RowDefinitions>
-                
-                <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,5">
-                    <Button Content="Add Files" Command="{Binding AddFilesCommand}" 
-                            Padding="10,5" Margin="0,0,5,0"/>
-                    <Button Content="Clear All" Command="{Binding ClearFilesCommand}" 
-                            Padding="10,5"/>
-                </StackPanel>
-                
-                <ListView Grid.Row="1" ItemsSource="{Binding PdfFiles}" 
-                          x:Name="PdfListView" 
-                          BorderThickness="0"
-                          SelectionMode="Single">
-                    <ListView.ItemTemplate>
-                        <DataTemplate>
-                            <Grid Margin="0,5">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="Auto"/>
-                                </Grid.ColumnDefinitions>
-                                
-                                <StackPanel Grid.Column="0" Margin="0,0,10,0">
-                                    <TextBlock Text="{Binding FileName}" FontWeight="SemiBold"/>
-                                    <TextBlock>
+
+        <ListView Grid.Row="1"
+                  ItemsSource="{Binding PdfFiles}"
+                  x:Name="PdfListView"
+                  BorderThickness="0"
+                  SelectionMode="Single">
+          <ListView.ItemTemplate>
+            <DataTemplate>
+              <Grid Margin="0,5">
+                <Grid.ColumnDefinitions>
+                  <ColumnDefinition Width="*"/>
+                  <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <StackPanel Grid.Column="0"
+                            Margin="0,0,10,0">
+                  <TextBlock Text="{Binding FileName}"
+                             FontWeight="SemiBold"/>
+                  <TextBlock>
                                         <Run Text="Size: "/>
                                         <Run Text="{Binding FileSize, StringFormat='{}{0:N0} bytes'}"/>
                                         <Run Text=" | Last Modified: "/>
                                         <Run Text="{Binding LastModified, StringFormat='{}{0:g}'}"/>
-                                    </TextBlock>
-                                </StackPanel>
-                                
-                                <StackPanel Grid.Column="1" Orientation="Horizontal">
-                                    <Button Content="▲" Command="{Binding DataContext.MoveUpCommand, 
-                                            RelativeSource={RelativeSource AncestorType=ListView}}" 
-                                            CommandParameter="{Binding}"
-                                            Padding="5,0" Margin="2"/>
-                                    <Button Content="▼" Command="{Binding DataContext.MoveDownCommand, 
-                                            RelativeSource={RelativeSource AncestorType=ListView}}" 
-                                            CommandParameter="{Binding}"
-                                            Padding="5,0" Margin="2"/>
-                                    <Button Content="✕" Command="{Binding DataContext.RemoveFileCommand, 
-                                            RelativeSource={RelativeSource AncestorType=ListView}}" 
-                                            CommandParameter="{Binding}"
-                                            Padding="5,0" Margin="2"/>
-                                </StackPanel>
-                            </Grid>
-                        </DataTemplate>
-                    </ListView.ItemTemplate>
-                    
-                    <ListView.ItemContainerStyle>
-                        <Style TargetType="ListViewItem">
-                            <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
-                            <Setter Property="Padding" Value="5"/>
-                            <Setter Property="BorderThickness" Value="0,0,0,1"/>
-                            <Setter Property="BorderBrush" Value="#EEEEEE"/>
-                        </Style>
-                    </ListView.ItemContainerStyle>
-                </ListView>
-                
-                <!-- Empty state message -->
-                <TextBlock Grid.Row="1" 
-                           Text="Drag and drop PDF files here or click 'Add Files' to select PDFs to merge." 
-                           HorizontalAlignment="Center" 
-                           VerticalAlignment="Center" 
-                           TextWrapping="Wrap" 
-                           Foreground="Gray"
-                           TextAlignment="Center"
-                           Visibility="{Binding PdfFiles.Count, Converter={StaticResource CountToVisibilityConverter}}"/>
-            </Grid>
-        </Border>
-        
-        <!-- Auto-open checkbox -->
-        <CheckBox Grid.Row="2" 
-                  Content="Automatically open merged PDF when complete" 
-                  IsChecked="{Binding AutoOpenAfterMerge}"
-                  Margin="0,10,0,10"/>
-        
-        <!-- Merge button and progress -->
-        <Grid Grid.Row="3">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*"/>
-                <ColumnDefinition Width="Auto"/>
-            </Grid.ColumnDefinitions>
-            
-            <ProgressBar Grid.Column="0" 
-                         Height="30" 
-                         Value="{Binding MergeProgress}" 
-                         Margin="0,0,10,0"
-                         Visibility="{Binding IsMerging, Converter={StaticResource BooleanToVisibilityConverter}}"/>
-            
-            <Button Grid.Column="1" 
-                    Content="Merge PDFs" 
-                    Command="{Binding MergePdfsCommand}" 
-                    Padding="15,10" 
-                    FontWeight="SemiBold"
-                    IsEnabled="{Binding IsMerging, Converter={StaticResource InverseBooleanConverter}}"/>
-        </Grid>
+                  </TextBlock>
+                </StackPanel>
+
+                <StackPanel Grid.Column="1"
+                            Orientation="Horizontal">
+                  <Button Content="▲"
+                          Command="{Binding DataContext.MoveUpCommand, 
+                                            RelativeSource={RelativeSource AncestorType=ListView}}"
+                          CommandParameter="{Binding}"
+                          Padding="5,0"
+                          Margin="2"/>
+                  <Button Content="▼"
+                          Command="{Binding DataContext.MoveDownCommand, 
+                                            RelativeSource={RelativeSource AncestorType=ListView}}"
+                          CommandParameter="{Binding}"
+                          Padding="5,0"
+                          Margin="2"/>
+                  <Button Content="✕"
+                          Command="{Binding DataContext.RemoveFileCommand, 
+                                            RelativeSource={RelativeSource AncestorType=ListView}}"
+                          CommandParameter="{Binding}"
+                          Padding="5,0"
+                          Margin="2"/>
+                </StackPanel>
+              </Grid>
+            </DataTemplate>
+          </ListView.ItemTemplate>
+
+          <ListView.ItemContainerStyle>
+            <Style TargetType="ListViewItem">
+              <Setter Property="HorizontalContentAlignment"
+                      Value="Stretch"/>
+              <Setter Property="Padding"
+                      Value="5"/>
+              <Setter Property="BorderThickness"
+                      Value="0,0,0,1"/>
+              <Setter Property="BorderBrush"
+                      Value="#EEEEEE"/>
+            </Style>
+          </ListView.ItemContainerStyle>
+        </ListView>
+
+        <!-- Empty state message -->
+        <TextBlock Grid.Row="1"
+                   Text="Drag and drop PDF files here or click 'Add Files' to select PDFs to merge."
+                   HorizontalAlignment="Center"
+                   VerticalAlignment="Center"
+                   TextWrapping="Wrap"
+                   Foreground="Gray"
+                   TextAlignment="Center"
+                   Visibility="{Binding PdfFiles.Count, Converter={StaticResource CountToVisibilityConverter}}"/>
+      </Grid>
+    </Border>
+
+    <!-- Save Options -->
+    <StackPanel Grid.Row="2"
+                Margin="0,10,0,5">
+      <TextBlock Text="Save Options"
+                 FontWeight="SemiBold"
+                 Margin="0,0,0,5"/>
+      <StackPanel Margin="10,0,0,0">
+        <RadioButton Content="Auto-generate filename on Desktop"
+                     IsChecked="{Binding UseAutoGeneratedFilename}"
+                     Margin="0,5"/>
+        <RadioButton Content="Choose save location"
+                     IsChecked="{Binding UseAutoGeneratedFilename, Converter={StaticResource InverseBooleanConverter}}"
+                     Margin="0,5"/>
+      </StackPanel>
+    </StackPanel>
+
+    <!-- Auto-open checkbox -->
+    <CheckBox Grid.Row="3"
+              Content="Automatically open merged PDF when complete"
+              IsChecked="{Binding AutoOpenAfterMerge}"
+              Margin="0,5,0,10"/>
+
+    <!-- Merge button and progress -->
+    <Grid Grid.Row="4">
+      <Grid.ColumnDefinitions>
+        <ColumnDefinition Width="*"/>
+        <ColumnDefinition Width="Auto"/>
+      </Grid.ColumnDefinitions>
+
+      <ProgressBar Grid.Column="0"
+                   Height="30"
+                   Value="{Binding MergeProgress}"
+                   Margin="0,0,10,0"
+                   Visibility="{Binding IsMerging, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+
+      <Button Grid.Column="1"
+              Content="Merge PDFs"
+              Command="{Binding MergePdfsCommand}"
+              Padding="15,10"
+              FontWeight="SemiBold"
+              IsEnabled="{Binding IsMerging, Converter={StaticResource InverseBooleanConverter}}"/>
     </Grid>
+  </Grid>
 </Window>
