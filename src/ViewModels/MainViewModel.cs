@@ -275,13 +275,20 @@ namespace PdfMerger.ViewModels
 
         IsMerging = true;
         MergeProgress = 0;
+        StatusMessage = "Merging PDFs...";
 
         _logger.Log($"Starting merge of {PdfFiles.Count} files", LogLevel.Info);
 
-        var progress = new Progress<int>(value => MergeProgress = value);
+        var progress = new Progress<int>(value =>
+        {
+          MergeProgress = value;
+          StatusMessage = $"Merging PDFs... {value}%";
+        });
+
         string finalPath = await _pdfService.MergePdfsAsync(PdfFiles.ToList(), outputPath, progress, _customPageOrder);
 
         _logger.Log($"Merge completed successfully. Output file: {finalPath}", LogLevel.Info);
+        StatusMessage = "Merge completed successfully!";
 
         MessageBox.Show($"PDFs merged successfully!\nSaved to: {finalPath}",
             "Merge Complete", MessageBoxButton.OK, MessageBoxImage.Information);
@@ -294,6 +301,7 @@ namespace PdfMerger.ViewModels
       catch (Exception ex)
       {
         _logger.LogError("Error merging PDFs", ex);
+        StatusMessage = "Error merging PDFs";
         MessageBox.Show($"Error merging PDFs: {ex.Message}",
             "Merge Error", MessageBoxButton.OK, MessageBoxImage.Error);
       }
@@ -301,6 +309,11 @@ namespace PdfMerger.ViewModels
       {
         IsMerging = false;
         MergeProgress = 0;
+        _customPageOrder = null;
+        if (StatusMessage == "Merging PDFs...")
+        {
+          StatusMessage = "Ready";
+        }
       }
     }
   }
