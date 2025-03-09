@@ -2,6 +2,7 @@ using System;
 using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
+using System.Threading.Tasks;
 using System.Windows.Input;
 using PdfMerger.Helpers;
 using PdfMerger.Models;
@@ -11,6 +12,8 @@ namespace PdfMerger.ViewModels
   public class PageOrderingViewModel : ViewModelBase
   {
     private readonly Logger _logger;
+    private bool _isGeneratingThumbnails;
+    private double _thumbnailProgress;
 
     public ObservableCollection<PdfPage> Pages { get; } = new ObservableCollection<PdfPage>();
     public ICommand MoveUpCommand { get; }
@@ -20,6 +23,18 @@ namespace PdfMerger.ViewModels
     public ICommand CancelCommand { get; }
 
     public event EventHandler<PageOrderResult>? OrderingComplete;
+
+    public bool IsGeneratingThumbnails
+    {
+      get => _isGeneratingThumbnails;
+      private set => SetProperty(ref _isGeneratingThumbnails, value);
+    }
+
+    public double ThumbnailProgress
+    {
+      get => _thumbnailProgress;
+      private set => SetProperty(ref _thumbnailProgress, value);
+    }
 
     public PageOrderingViewModel(ObservableCollection<PdfFile> pdfFiles, Logger logger)
     {
@@ -56,10 +71,42 @@ namespace PdfMerger.ViewModels
         }
 
         _logger.Log($"Loaded {Pages.Count} pages from {pdfFiles.Count} files", LogLevel.Info);
+
+        // Start generating thumbnails
+        _ = GenerateThumbnailsAsync();
       }
       catch (Exception ex)
       {
         _logger.LogError("Error loading pages", ex);
+      }
+    }
+
+    private async Task GenerateThumbnailsAsync()
+    {
+      try
+      {
+        IsGeneratingThumbnails = true;
+        ThumbnailProgress = 0;
+
+        _logger.Log("Starting thumbnail generation", LogLevel.Info);
+
+        var totalPages = Pages.Count;
+        for (int i = 0; i < totalPages; i++)
+        {
+          await Task.Run(() => Pages[i].GenerateThumbnail());
+          ThumbnailProgress = ((i + 1) / (double)totalPages) * 100.0;
+        }
+
+        _logger.Log("Thumbnail generation complete", LogLevel.Info);
+      }
+      catch (Exception ex)
+      {
+        _logger.LogError("Error generating thumbnails", ex);
+      }
+      finally
+      {
+        IsGeneratingThumbnails = false;
+        ThumbnailProgress = 0;
       }
     }
 

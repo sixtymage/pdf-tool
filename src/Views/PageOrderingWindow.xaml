@@ -5,6 +5,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:PdfMerger.Views"
         xmlns:viewModels="clr-namespace:PdfMerger.ViewModels"
+        xmlns:converters="clr-namespace:PdfMerger.Converters"
         mc:Ignorable="d"
         Title="Reorder Pages"
         Height="600"
@@ -18,6 +19,8 @@
       <Setter Property="Margin"
               Value="5"/>
     </Style>
+    <converters:NullToVisibilityConverter x:Key="NullToVisibilityConverter"/>
+    <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
   </Window.Resources>
 
   <Grid Margin="10">
@@ -55,6 +58,7 @@
           <Grid Margin="5">
             <Grid.ColumnDefinitions>
               <ColumnDefinition Width="Auto"/>
+              <ColumnDefinition Width="Auto"/>
               <ColumnDefinition Width="*"/>
               <ColumnDefinition Width="Auto"/>
             </Grid.ColumnDefinitions>
@@ -72,8 +76,31 @@
                          FontWeight="SemiBold"/>
             </Border>
 
+            <!-- Thumbnail -->
+            <Border Grid.Column="1"
+                    Width="100"
+                    Height="133"
+                    Margin="0,0,10,0"
+                    BorderBrush="#DDDDDD"
+                    BorderThickness="1">
+              <Grid>
+                <!-- Placeholder when no thumbnail -->
+                <Border Background="#F5F5F5"
+                        Visibility="{Binding Thumbnail, Converter={StaticResource NullToVisibilityConverter}}">
+                  <TextBlock Text="Loading..."
+                             HorizontalAlignment="Center"
+                             VerticalAlignment="Center"
+                             Foreground="#666666"/>
+                </Border>
+                <!-- Actual thumbnail -->
+                <Image Source="{Binding Thumbnail}"
+                       Stretch="Uniform"
+                       RenderOptions.BitmapScalingMode="HighQuality"/>
+              </Grid>
+            </Border>
+
             <!-- Page Info -->
-            <StackPanel Grid.Column="1"
+            <StackPanel Grid.Column="2"
                         VerticalAlignment="Center">
               <TextBlock>
                 <Run Text="From: "/>
@@ -87,7 +114,7 @@
             </StackPanel>
 
             <!-- Controls -->
-            <StackPanel Grid.Column="2"
+            <StackPanel Grid.Column="3"
                         Orientation="Horizontal">
               <Button Content="▲"
                       Command="{Binding DataContext.MoveUpCommand, 
@@ -112,6 +139,21 @@
         </DataTemplate>
       </ListView.ItemTemplate>
     </ListView>
+
+    <!-- Progress Overlay -->
+    <Border Grid.Row="1"
+            Background="#80FFFFFF"
+            Visibility="{Binding IsGeneratingThumbnails, Converter={StaticResource BooleanToVisibilityConverter}}">
+      <StackPanel VerticalAlignment="Center"
+                  HorizontalAlignment="Center">
+        <TextBlock Text="Generating thumbnails..."
+                   FontSize="16"
+                   Margin="0,0,0,10"/>
+        <ProgressBar Width="200"
+                     Height="20"
+                     Value="{Binding ThumbnailProgress, Mode=OneWay}"/>
+      </StackPanel>
+    </Border>
 
     <!-- Buttons -->
     <StackPanel Grid.Row="2"
