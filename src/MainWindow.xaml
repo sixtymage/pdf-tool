@@ -55,7 +55,7 @@
 
     <!-- Status and Progress -->
     <Grid Grid.Row="1"
-        Margin="10,5">
+          Margin="10,5">
       <Grid.ColumnDefinitions>
         <ColumnDefinition Width="*"/>
         <ColumnDefinition Width="Auto"/>
