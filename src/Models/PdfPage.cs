@@ -8,7 +8,8 @@ namespace PdfMerger.Models
     public string SourceFilePath { get; }
     public int PageNumber { get; }  // 1-based page number in source PDF
     public string DisplayName { get; }
-    public string SourceFileName => Path.GetFileName(SourceFilePath);
+    public string SourceFileName { get; set; } = string.Empty;
+    public int DisplayOrder { get; set; }
 
     public PdfPage(string sourceFilePath, int pageNumber)
     {

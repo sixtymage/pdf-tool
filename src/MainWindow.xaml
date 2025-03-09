@@ -74,6 +74,10 @@
           <Button Content="Clear All"
                   Command="{Binding ClearFilesCommand}"
                   Padding="10,5"/>
+          <Button Content="Reorder Pages"
+                  Command="{Binding OrderPagesCommand}"
+                  Padding="10,5"
+                  Margin="5,0,0,0"/>
         </StackPanel>
 
         <ListView Grid.Row="1"
