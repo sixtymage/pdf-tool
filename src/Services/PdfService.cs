@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Threading.Tasks;
 using PdfMerger.Models;
 using PdfMerger.Helpers;
@@ -23,22 +24,35 @@ namespace PdfMerger.Services
       return Path.GetExtension(filePath).Equals(".pdf", StringComparison.OrdinalIgnoreCase);
     }
 
-    public async Task<List<Models.PdfPage>> LoadPdfPagesAsync(string filePath)
+    public async Task<List<Models.PdfPage>> LoadPagesAsync(string filePath)
     {
+      if (string.IsNullOrEmpty(filePath))
+        throw new ArgumentException("File path cannot be null or empty", nameof(filePath));
+
+      if (!File.Exists(filePath))
+        throw new FileNotFoundException("PDF file not found", filePath);
+
       return await Task.Run(() =>
       {
-        var pages = new List<Models.PdfPage>();
-
-        using (var document = PdfReader.Open(filePath, PdfDocumentOpenMode.Import))
+        try
         {
+          using var document = PdfReader.Open(filePath, PdfDocumentOpenMode.Import);
+          var pages = new List<Models.PdfPage>();
+
           for (int i = 0; i < document.Pages.Count; i++)
           {
-            // Page numbers are 1-based
-            pages.Add(new Models.PdfPage(filePath, i + 1));
+            var page = new Models.PdfPage(filePath, i + 1, _logger);
+            pages.Add(page);
           }
-        }
 
-        return pages;
+          _logger.Log($"Successfully loaded {pages.Count} pages from {Path.GetFileName(filePath)}");
+          return pages;
+        }
+        catch (Exception ex)
+        {
+          _logger.Log($"Error loading pages from {Path.GetFileName(filePath)}: {ex.Message}");
+          throw;
+        }
       });
     }
 
@@ -73,10 +87,10 @@ namespace PdfMerger.Services
                 foreach (var page in customPageOrder)
                 {
                   // Open source document if not already open
-                  if (!openDocuments.TryGetValue(page.SourceFilePath, out var sourceDocument))
+                  if (!openDocuments.TryGetValue(page.FilePath, out var sourceDocument))
                   {
-                    sourceDocument = PdfReader.Open(page.SourceFilePath, PdfDocumentOpenMode.Import);
-                    openDocuments[page.SourceFilePath] = sourceDocument;
+                    sourceDocument = PdfReader.Open(page.FilePath, PdfDocumentOpenMode.Import);
+                    openDocuments[page.FilePath] = sourceDocument;
                   }
 
                   // Add the specified page

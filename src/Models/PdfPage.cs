@@ -1,128 +1,84 @@
 using System;
 using System.IO;
-using System.Windows.Media;
 using System.Windows.Media.Imaging;
+using PdfiumViewer;
 using PdfMerger.ViewModels;
-using PdfSharp.Drawing;
-using PdfSharp.Pdf;
-using PdfSharp.Pdf.IO;
+using PdfMerger.Helpers;
 
 namespace PdfMerger.Models
 {
   public class PdfPage : ViewModelBase
   {
-    private ImageSource? _thumbnail;
+    private readonly string _filePath;
+    private readonly int _pageNumber;
+    private BitmapSource _thumbnail;
+    private double _thumbnailProgress;
+    private readonly Logger _logger;
 
-    public string SourceFilePath { get; }
-    public int PageNumber { get; }  // 1-based page number in source PDF
-    public string DisplayName { get; }
-    public string SourceFileName { get; set; } = string.Empty;
-    public int DisplayOrder { get; set; }
+    public PdfPage(string filePath, int pageNumber, Logger logger)
+    {
+      _filePath = filePath ?? throw new ArgumentNullException(nameof(filePath));
+      if (pageNumber < 1) throw new ArgumentOutOfRangeException(nameof(pageNumber), "Page number must be greater than 0");
+      _pageNumber = pageNumber;
+      _logger = logger ?? throw new ArgumentNullException(nameof(logger));
 
-    public ImageSource? Thumbnail
+      // Create an empty bitmap as placeholder
+      _thumbnail = new BitmapImage();
+      LoadThumbnailAsync();
+    }
+
+    public string FilePath => _filePath;
+    public int PageNumber => _pageNumber;
+
+    public BitmapSource Thumbnail
     {
       get => _thumbnail;
       private set => SetProperty(ref _thumbnail, value);
     }
 
-    public PdfPage(string sourceFilePath, int pageNumber)
+    public double ThumbnailProgress
     {
-      if (string.IsNullOrEmpty(sourceFilePath))
-        throw new ArgumentException("Source file path cannot be null or empty", nameof(sourceFilePath));
-
-      if (pageNumber < 1)
-        throw new ArgumentException("Page number must be greater than 0", nameof(pageNumber));
-
-      if (!File.Exists(sourceFilePath))
-        throw new FileNotFoundException("Source PDF file not found", sourceFilePath);
-
-      SourceFilePath = sourceFilePath;
-      PageNumber = pageNumber;
-      DisplayName = $"{Path.GetFileNameWithoutExtension(sourceFilePath)} - Page {pageNumber}";
+      get => _thumbnailProgress;
+      private set => SetProperty(ref _thumbnailProgress, value);
     }
 
-    public void GenerateThumbnail(int width = 150, int height = 200)
+    private async void LoadThumbnailAsync()
     {
       try
       {
-        using (var document = PdfReader.Open(SourceFilePath, PdfDocumentOpenMode.Import))
-        {
-          if (PageNumber <= document.Pages.Count)
-          {
-            var page = document.Pages[PageNumber - 1];
+        ThumbnailProgress = 0;
+        await using var fileStream = File.OpenRead(_filePath);
+        using var pdfDocument = PdfDocument.Load(fileStream);
 
-            // Create a bitmap to render the page
-            using (var stream = new MemoryStream())
-            {
-              // Create XImage from the PDF page
-              using (var gfx = XGraphics.FromPdfPage(page))
-              {
-                // Get page dimensions
-                var pageWidth = page.Width.Point;
-                var pageHeight = page.Height.Point;
+        ThumbnailProgress = 33;
+        var size = pdfDocument.PageSizes[_pageNumber - 1];
+        var scale = Math.Min(100 / size.Width, 150 / size.Height);
+        var width = (int)(size.Width * scale);
+        var height = (int)(size.Height * scale);
 
-                // Calculate scale to fit desired dimensions while maintaining aspect ratio
-                var scaleX = width / pageWidth;
-                var scaleY = height / pageHeight;
-                var scale = Math.Min(scaleX, scaleY);
+        ThumbnailProgress = 66;
+        using var image = pdfDocument.Render(_pageNumber - 1, width, height, 96, 96, false);
+        var bitmap = new System.Drawing.Bitmap(image);
 
-                // Create scaled bitmap
-                var scaledWidth = (int)(pageWidth * scale);
-                var scaledHeight = (int)(pageHeight * scale);
+        ThumbnailProgress = 90;
+        using var memory = new MemoryStream();
+        bitmap.Save(memory, System.Drawing.Imaging.ImageFormat.Png);
+        memory.Position = 0;
 
-                // Create WPF bitmap
-                var bitmap = new RenderTargetBitmap(
-                    scaledWidth,
-                    scaledHeight,
-                    96, // DPI X
-                    96, // DPI Y
-                    PixelFormats.Pbgra32);
+        var bitmapImage = new BitmapImage();
+        bitmapImage.BeginInit();
+        bitmapImage.CacheOption = BitmapCacheOption.OnLoad;
+        bitmapImage.StreamSource = memory;
+        bitmapImage.EndInit();
+        bitmapImage.Freeze();
 
-                // Create drawing visual
-                var visual = new DrawingVisual();
-                using (var context = visual.RenderOpen())
-                {
-                  // Draw white background
-                  context.DrawRectangle(
-                      Brushes.White,
-                      null,
-                      new System.Windows.Rect(0, 0, scaledWidth, scaledHeight));
-
-                  // Draw the page content
-                  context.PushTransform(new ScaleTransform(scale, scale));
-                  // Add page rendering here when we figure out how to render PDF content
-                }
-
-                // Render the visual to the bitmap
-                bitmap.Render(visual);
-
-                // Create a PNG encoder
-                var encoder = new PngBitmapEncoder();
-                encoder.Frames.Add(BitmapFrame.Create(bitmap));
-
-                // Save to memory stream
-                encoder.Save(stream);
-
-                // Create bitmap image from stream
-                stream.Position = 0;
-                var bitmapImage = new BitmapImage();
-                bitmapImage.BeginInit();
-                bitmapImage.CacheOption = BitmapCacheOption.OnLoad;
-                bitmapImage.StreamSource = stream;
-                bitmapImage.EndInit();
-                bitmapImage.Freeze(); // Make it thread-safe
-
-                // Set the thumbnail
-                Thumbnail = bitmapImage;
-              }
-            }
-          }
-        }
+        Thumbnail = bitmapImage;
+        ThumbnailProgress = 100;
       }
       catch (Exception ex)
       {
-        // Log error but don't throw - thumbnail generation is not critical
-        System.Diagnostics.Debug.WriteLine($"Error generating thumbnail: {ex.Message}");
+        _logger.LogError($"Error generating thumbnail for page {PageNumber} of {Path.GetFileName(FilePath)}", ex);
+        ThumbnailProgress = -1;
       }
     }
   }

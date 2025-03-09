@@ -14,8 +14,9 @@ namespace PdfMerger.ViewModels
     private readonly Logger _logger;
     private bool _isGeneratingThumbnails;
     private double _thumbnailProgress;
+    private readonly ObservableCollection<PdfPage> _pages = new();
 
-    public ObservableCollection<PdfPage> Pages { get; } = new ObservableCollection<PdfPage>();
+    public ObservableCollection<PdfPage> Pages => _pages;
     public ICommand MoveUpCommand { get; }
     public ICommand MoveDownCommand { get; }
     public ICommand RemovePageCommand { get; }
@@ -61,19 +62,15 @@ namespace PdfMerger.ViewModels
         {
           for (int i = 1; i <= file.PageCount; i++)
           {
-            var page = new PdfPage(file.FilePath, i)
-            {
-              DisplayOrder = Pages.Count + 1,
-              SourceFileName = file.FileName
-            };
+            var page = new PdfPage(file.FilePath, i, _logger);
             Pages.Add(page);
           }
         }
 
         _logger.Log($"Loaded {Pages.Count} pages from {pdfFiles.Count} files", LogLevel.Info);
 
-        // Start generating thumbnails
-        _ = GenerateThumbnailsAsync();
+        // Start monitoring thumbnail progress
+        _ = MonitorThumbnailProgressAsync();
       }
       catch (Exception ex)
       {
@@ -81,7 +78,7 @@ namespace PdfMerger.ViewModels
       }
     }
 
-    private async Task GenerateThumbnailsAsync()
+    private async Task MonitorThumbnailProgressAsync()
     {
       try
       {
@@ -91,22 +88,24 @@ namespace PdfMerger.ViewModels
         _logger.Log("Starting thumbnail generation", LogLevel.Info);
 
         var totalPages = Pages.Count;
-        for (int i = 0; i < totalPages; i++)
+        var completedPages = 0;
+
+        while (completedPages < totalPages)
         {
-          await Task.Run(() => Pages[i].GenerateThumbnail());
-          ThumbnailProgress = ((i + 1) / (double)totalPages) * 100.0;
+          completedPages = Pages.Count(p => p.ThumbnailProgress == 100);
+          ThumbnailProgress = (completedPages / (double)totalPages) * 100.0;
+          await Task.Delay(100); // Check progress every 100ms
         }
 
         _logger.Log("Thumbnail generation complete", LogLevel.Info);
       }
       catch (Exception ex)
       {
-        _logger.LogError("Error generating thumbnails", ex);
+        _logger.LogError("Error monitoring thumbnails", ex);
       }
       finally
       {
         IsGeneratingThumbnails = false;
-        ThumbnailProgress = 0;
       }
     }
 
@@ -128,8 +127,7 @@ namespace PdfMerger.ViewModels
         if (index > 0)
         {
           Pages.Move(index, index - 1);
-          UpdateDisplayOrder();
-          _logger.Log($"Moved page up: {page.SourceFileName} page {page.PageNumber}", LogLevel.Info);
+          _logger.Log($"Moved page up: {Path.GetFileName(page.FilePath)} page {page.PageNumber}", LogLevel.Info);
         }
       }
     }
@@ -149,11 +147,10 @@ namespace PdfMerger.ViewModels
       if (parameter is PdfPage page)
       {
         int index = Pages.IndexOf(page);
-        if (index >= 0 && index < Pages.Count - 1)
+        if (index < Pages.Count - 1)
         {
           Pages.Move(index, index + 1);
-          UpdateDisplayOrder();
-          _logger.Log($"Moved page down: {page.SourceFileName} page {page.PageNumber}", LogLevel.Info);
+          _logger.Log($"Moved page down: {Path.GetFileName(page.FilePath)} page {page.PageNumber}", LogLevel.Info);
         }
       }
     }
@@ -163,40 +160,33 @@ namespace PdfMerger.ViewModels
       if (parameter is PdfPage page)
       {
         Pages.Remove(page);
-        UpdateDisplayOrder();
-        _logger.Log($"Removed page: {page.SourceFileName} page {page.PageNumber}", LogLevel.Info);
+        _logger.Log($"Removed page: {Path.GetFileName(page.FilePath)} page {page.PageNumber}", LogLevel.Info);
       }
     }
 
     public void MovePage(PdfPage page, int newIndex)
     {
-      int oldIndex = Pages.IndexOf(page);
-      if (oldIndex >= 0 && oldIndex != newIndex)
+      if (newIndex >= 0 && newIndex < Pages.Count)
       {
-        Pages.Move(oldIndex, newIndex);
-        UpdateDisplayOrder();
-        _logger.Log($"Moved page from position {oldIndex + 1} to {newIndex + 1}", LogLevel.Info);
-      }
-    }
-
-    private void UpdateDisplayOrder()
-    {
-      for (int i = 0; i < Pages.Count; i++)
-      {
-        Pages[i].DisplayOrder = i + 1;
+        int oldIndex = Pages.IndexOf(page);
+        if (oldIndex >= 0 && oldIndex != newIndex)
+        {
+          Pages.Move(oldIndex, newIndex);
+          _logger.Log($"Moved page from {oldIndex} to {newIndex}", LogLevel.Info);
+        }
       }
     }
 
     private void ApplyOrder()
     {
-      _logger.Log("Applying page order", LogLevel.Info);
       OrderingComplete?.Invoke(this, new PageOrderResult(true, Pages.ToList()));
+      _logger.Log("Page order applied", LogLevel.Info);
     }
 
     private void Cancel()
     {
-      _logger.Log("Cancelled page ordering", LogLevel.Info);
-      OrderingComplete?.Invoke(this, new PageOrderResult(false, new List<PdfPage>()));
+      OrderingComplete?.Invoke(this, new PageOrderResult(false, Pages.ToList()));
+      _logger.Log("Page ordering cancelled", LogLevel.Info);
     }
   }
 
