@@ -2,11 +2,10 @@
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:local="clr-namespace:PdfMerger"
-             xmlns:helpers="clr-namespace:PdfMerger.Helpers"
-             StartupUri="MainWindow.xaml">
-    <Application.Resources>
-        <helpers:BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
-        <helpers:InverseBooleanConverter x:Key="InverseBooleanConverter" />
-        <helpers:CountToVisibilityConverter x:Key="CountToVisibilityConverter" />
-    </Application.Resources>
+             xmlns:helpers="clr-namespace:PdfMerger.Helpers">
+  <Application.Resources>
+    <helpers:BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
+    <helpers:InverseBooleanConverter x:Key="InverseBooleanConverter"/>
+    <helpers:CountToVisibilityConverter x:Key="CountToVisibilityConverter"/>
+  </Application.Resources>
 </Application>
