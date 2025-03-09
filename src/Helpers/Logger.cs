@@ -1,36 +1,49 @@
 using System;
 using System.IO;
-using System.Reflection;
 using System.Text;
+using System.Diagnostics;
 
 namespace PdfMerger.Helpers
 {
-  public static class Logger
+  public enum LogLevel
   {
-    private static readonly string LogFilePath;
+    Debug,
+    Info,
+    Warning,
+    Error
+  }
+
+  public class Logger
+  {
+    private readonly string _logFilePath;
     private static readonly object LockObject = new object();
 
-    static Logger()
+    public Logger()
     {
       string appDirectory = AppContext.BaseDirectory;
-      LogFilePath = Path.Combine(appDirectory, "PdfMerger.log");
+      _logFilePath = Path.Combine(appDirectory, "PdfMerger.log");
+
+      // Ensure log directory exists
+      string? directory = Path.GetDirectoryName(_logFilePath);
+      if (!string.IsNullOrEmpty(directory) && !Directory.Exists(directory))
+      {
+        Directory.CreateDirectory(directory);
+      }
     }
 
-    public static void Log(string message)
-    {
-      Log(LogLevel.Info, message);
-    }
-
-    public static void Log(LogLevel level, string message)
+    public void Log(string message, LogLevel level = LogLevel.Info)
     {
       try
       {
-        string logEntry = $"{DateTime.Now:yyyy-MM-dd HH:mm:ss} [{level}] {message}";
+        string logEntry = $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] [{level}] {message}";
 
         lock (LockObject)
         {
-          File.AppendAllText(LogFilePath, logEntry + Environment.NewLine, Encoding.UTF8);
+          File.AppendAllText(_logFilePath, logEntry + Environment.NewLine);
         }
+
+        // Also output to debug console
+        Debug.WriteLine(logEntry);
       }
       catch
       {
@@ -38,28 +51,20 @@ namespace PdfMerger.Helpers
       }
     }
 
-    public static void LogError(string message, Exception ex)
+    public void LogError(string message, Exception ex)
     {
-      StringBuilder sb = new StringBuilder();
+      var sb = new StringBuilder();
       sb.AppendLine(message);
       sb.AppendLine($"Exception: {ex.Message}");
-      sb.AppendLine($"StackTrace: {ex.StackTrace}");
+      sb.AppendLine($"Stack Trace: {ex.StackTrace}");
 
       if (ex.InnerException != null)
       {
         sb.AppendLine($"Inner Exception: {ex.InnerException.Message}");
-        sb.AppendLine($"Inner StackTrace: {ex.InnerException.StackTrace}");
+        sb.AppendLine($"Inner Stack Trace: {ex.InnerException.StackTrace}");
       }
 
-      Log(LogLevel.Error, sb.ToString());
+      Log(sb.ToString(), LogLevel.Error);
     }
-  }
-
-  public enum LogLevel
-  {
-    Debug,
-    Info,
-    Warning,
-    Error
   }
 }

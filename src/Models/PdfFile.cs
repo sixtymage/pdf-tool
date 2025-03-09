@@ -1,27 +1,59 @@
 using System;
 using System.IO;
+using PdfSharp.Pdf;
+using PdfSharp.Pdf.IO;
 
 namespace PdfMerger.Models
 {
-    public class PdfFile
+  public class PdfFile
+  {
+    public string FilePath { get; }
+    public string FileName { get; }
+    public long FileSize { get; }
+    public DateTime LastModified { get; }
+    public int PageCount { get; }
+
+    public PdfFile(string filePath)
     {
-        public string FilePath { get; set; }
-        public string FileName => Path.GetFileName(FilePath);
-        public long FileSize { get; set; }
-        public DateTime LastModified { get; set; }
+      if (string.IsNullOrEmpty(filePath))
+        throw new ArgumentException("File path cannot be null or empty", nameof(filePath));
 
-        public PdfFile(string filePath)
-        {
-            FilePath = filePath;
-            
-            var fileInfo = new FileInfo(filePath);
-            FileSize = fileInfo.Length;
-            LastModified = fileInfo.LastWriteTime;
-        }
+      if (!File.Exists(filePath))
+        throw new FileNotFoundException("File not found", filePath);
 
-        public override string ToString()
-        {
-            return FileName;
-        }
+      FilePath = filePath;
+      FileName = Path.GetFileName(filePath);
+
+      var fileInfo = new FileInfo(filePath);
+      FileSize = fileInfo.Length;
+      LastModified = fileInfo.LastWriteTime;
+
+      // Get page count using PDFsharp
+      using (var document = PdfReader.Open(filePath, PdfDocumentOpenMode.Import))
+      {
+        PageCount = document.Pages.Count;
+      }
     }
-} 
+
+    public string FormattedSize
+    {
+      get
+      {
+        const long KB = 1024;
+        const long MB = KB * 1024;
+
+        if (FileSize < KB)
+          return $"{FileSize} B";
+        if (FileSize < MB)
+          return $"{FileSize / KB:F1} KB";
+
+        return $"{FileSize / MB:F1} MB";
+      }
+    }
+
+    public override string ToString()
+    {
+      return FileName;
+    }
+  }
+}

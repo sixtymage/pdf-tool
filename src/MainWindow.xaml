@@ -91,13 +91,13 @@
 
                 <StackPanel Grid.Column="0"
                             Margin="0,0,10,0">
-                  <TextBlock Text="{Binding FileName}"
+                  <TextBlock Text="{Binding FileName, Mode=OneWay}"
                              FontWeight="SemiBold"/>
                   <TextBlock>
-                                        <Run Text="Size: "/>
-                                        <Run Text="{Binding FileSize, StringFormat='{}{0:N0} bytes'}"/>
-                                        <Run Text=" | Last Modified: "/>
-                                        <Run Text="{Binding LastModified, StringFormat='{}{0:g}'}"/>
+                    <Run Text="Size: "/>
+                    <Run Text="{Binding FormattedSize, Mode=OneWay}"/>
+                    <Run Text=" | Last Modified: "/>
+                    <Run Text="{Binding LastModified, Mode=OneWay, StringFormat='{}{0:g}'}"/>
                   </TextBlock>
                 </StackPanel>
 
